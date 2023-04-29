@@ -1,12 +1,15 @@
+use tracing::{debug, info};
+use tracing_subscriber::EnvFilter;
+
 use lazy_static::lazy_static;
 
 use scraper::{Html, Selector};
 use regex::Regex;
 
-use std::collections::HashSet;
-
+#[tracing::instrument(skip(url))]
 async fn download(url: &str) -> Html {
     let resp = reqwest::get(url).await.expect("download failed");
+    info!("downloaded: {}", resp.url());
 
     let text = resp.text().await.expect("download text failed");
     Html::parse_document(&text)
@@ -14,6 +17,12 @@ async fn download(url: &str) -> Html {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(std::io::stderr)
+        .compact()
+        .init();
+
     lazy_static! {
         static ref NAME_REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid name regex");
         static ref ADDR_REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid addr regex");
@@ -28,8 +37,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let document = document.select(&selector).next().expect("list not found");
     let selector = Selector::parse(r#".PriceList__item"#).expect("invalid list item selector");
+    debug!("price list detected");
 
     for elem in document.select(&selector) {
+        debug!("price item detected");
         let selector_name = Selector::parse(r#".PriceList__itemTitle"#).expect("invalid name selector");
         let selector_addr = Selector::parse(r#".PriceList__itemSubtitle"#).expect("invalid addr selector");
         let selector_updated = Selector::parse(r#".PriceList__itemUpdated"#).expect("invalid updated selector");
@@ -42,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let price = elem.select(&selector_price).next().expect("no more price");
         let price_sup = price.select(&selector_supprice).next().expect("no sup-price found");
 
-        println!("name={}, price={}{}, updated={}, addr='{}'",
+        info!("name={}, price={}{}, updated={}, addr='{}'",
             NAME_REGEX.find_iter(&name.inner_html()).map(|mat| mat.as_str()).next().expect("name regex mismatch"),
             PRICE_REGEX.find_iter(&price.inner_html()).map(|mat| mat.as_str()).next().expect("price regex mismatch"),
             PRICE_SUP_REGEX.find_iter(&price_sup.inner_html()).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch"),
