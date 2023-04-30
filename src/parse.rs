@@ -5,6 +5,8 @@ use scraper::Selector;
 use regex::Regex;
 use chrono::{DateTime, TimeZone, Local};
 
+use tokio::try_join;
+
 use tracing::{debug, info};
 
 #[tracing::instrument(skip(document))]
@@ -22,11 +24,12 @@ pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Err
 
     for elem in document.select(&selector_priceitem) {
         debug!("price item detected");
-        let name = parse_text(&elem, &selector_name).await?;
-        let addr = parse_text(&elem, &selector_addr).await?;
-        let updated = parse_updated(&elem, &selector_updated).await?;
-        let price = parse_price(&elem, &selector_price, &selector_supprice).await?;
+        let name = parse_text(&elem, &selector_name);
+        let addr = parse_text(&elem, &selector_addr);
+        let updated = parse_updated(&elem, &selector_updated);
+        let price = parse_price(&elem, &selector_price, &selector_supprice);
 
+        let (name, addr, updated, price) = try_join!(name, addr, updated, price)?;
         info!("name={name}, price={price:.3}, updated={updated}, addr='{addr}'");
     }
 
