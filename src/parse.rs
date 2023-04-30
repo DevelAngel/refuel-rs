@@ -1,21 +1,14 @@
-use scraper::Html;
+use scraper::{Html, ElementRef};
 
 use lazy_static::lazy_static;
 use scraper::Selector;
 use regex::Regex;
+use chrono::{DateTime, TimeZone, Local};
 
-use tracing::{debug, info, error};
+use tracing::{debug, info};
 
 #[tracing::instrument(skip(document))]
 pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Error>> {
-    lazy_static! {
-        static ref NAME_REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid name regex");
-        static ref ADDR_REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid addr regex");
-        static ref UPDATED_REGEX: Regex = Regex::new(r#"\d{2}\.\d{2}\..\d{2}:\d{2}"#).expect("invalid updated regex");
-        static ref PRICE_REGEX: Regex = Regex::new(r"[0-9]\.[0-9]+").expect("invalid price regex");
-        static ref PRICE_SUP_REGEX: Regex = Regex::new(r"[0-9]").expect("invalid price-sub regex");
-    }
-
     let selector_pricelist = Selector::parse(r#".PriceList"#).expect("invalid list selector");
     let selector_priceitem = Selector::parse(r#".PriceList__item"#).expect("invalid list item selector");
     let selector_name = Selector::parse(r#".PriceList__itemTitle"#).expect("invalid name selector");
@@ -29,19 +22,73 @@ pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Err
 
     for elem in document.select(&selector_priceitem) {
         debug!("price item detected");
-        let name = elem.select(&selector_name).next().expect("no more name");
-        let addr = elem.select(&selector_addr).next().expect("no more addr");
-        let updated = elem.select(&selector_updated).next().expect("no more updated");
-        let price = elem.select(&selector_price).next().expect("no more price");
-        let price_sup = price.select(&selector_supprice).next().expect("no sup-price found");
+        let name = parse_text(&elem, &selector_name).await?;
+        let addr = parse_text(&elem, &selector_addr).await?;
+        let updated = parse_updated(&elem, &selector_updated).await?;
+        let price = parse_price(&elem, &selector_price, &selector_supprice).await?;
 
-        info!("name={}, price={}{}, updated={}, addr='{}'",
-            NAME_REGEX.find_iter(&name.inner_html()).map(|mat| mat.as_str()).next().expect("name regex mismatch"),
-            PRICE_REGEX.find_iter(&price.inner_html()).map(|mat| mat.as_str()).next().expect("price regex mismatch"),
-            PRICE_SUP_REGEX.find_iter(&price_sup.inner_html()).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch"),
-            UPDATED_REGEX.find_iter(&updated.inner_html()).map(|mat| mat.as_str()).next().expect("updated regex mismatch"),
-            ADDR_REGEX.find_iter(&addr.inner_html()).map(|mat| mat.as_str()).next().expect("addr regex mismatch"));
+        info!("name={name}, price={price:.3}, updated={updated}, addr='{addr}'");
     }
 
     Ok(())
 }
+
+#[tracing::instrument(skip(fragment))]
+async fn parse_text<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<String, Box<dyn std::error::Error>> {
+    lazy_static! {
+        static ref REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid text regex");
+    }
+
+    let text = fragment.select(selector).next().expect("no more name");
+    let text = REGEX.find_iter(&text.inner_html()).map(|mat| mat.as_str()).next().expect("text regex mismatch").to_owned();
+    Ok(text)
+}
+
+#[tracing::instrument(skip(fragment))]
+async fn parse_updated<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<DateTime<Local>, Box<dyn std::error::Error>> {
+    lazy_static! {
+        static ref REGEX: Regex = Regex::new(r#"(?P<d>\d{2})\.(?P<m>\d{2})\..(?P<h>\d{2}):(?P<min>\d{2})"#).expect("invalid updated regex");
+    }
+
+    let updated = fragment.select(selector).next().expect("no more updated");
+    let updated = updated.inner_html();
+    let updated = REGEX.captures(&updated).expect("updated regex mismatch");
+
+    let year = if let Some(year) = updated.name("y") {
+            year.as_str().parse()?
+        } else {
+            2023
+        };
+    let month = updated.name("m").expect("month missing in regex").as_str().parse().unwrap();
+    let day = updated.name("d").expect("day missing in regex").as_str().parse().unwrap();
+    let hour = updated.name("h").expect("day missing in regex").as_str().parse().unwrap();
+    let min = updated.name("min").expect("day missing in regex").as_str().parse().unwrap();
+    let sec = if let Some(sec) = updated.name("s") {
+            sec.as_str().parse()?
+        } else {
+            0
+        };
+
+    // expect datetime shown in local time
+    let datetime = Local.with_ymd_and_hms(year, month, day, hour, min, sec).unwrap();
+    Ok(datetime)
+}
+
+#[tracing::instrument(skip(fragment))]
+async fn parse_price<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector, selector_sup: &'b Selector) -> Result<f32, Box<dyn std::error::Error>> {
+    lazy_static! {
+        static ref REGEX: Regex = Regex::new(r"[0-9]\.[0-9]+").expect("invalid price regex");
+        static ref REGEX_SUP: Regex = Regex::new(r"[0-9]").expect("invalid price-sub regex");
+    }
+
+    let price = fragment.select(selector).next().expect("no more price");
+    let price_sup = price.select(selector_sup).next().expect("no sup-price found");
+
+    let price = REGEX.find_iter(&price.inner_html()).map(|mat| mat.as_str()).next().expect("price regex mismatch").to_owned();
+    let price_sup = REGEX_SUP.find_iter(&price_sup.inner_html()).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch").to_owned();
+
+    let price = format!("{price}{price_sup}");
+    let price = price.parse()?;
+    Ok(price)
+}
+
