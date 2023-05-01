@@ -1,7 +1,8 @@
-use scraper::{Html, ElementRef};
+use crate::error::ParseError;
+
+use scraper::{Html, ElementRef, Selector};
 
 use lazy_static::lazy_static;
-use scraper::Selector;
 use regex::Regex;
 use chrono::{DateTime, TimeZone, Local};
 
@@ -9,8 +10,10 @@ use tokio::try_join;
 
 use tracing::{debug, info, error};
 
+type Result<T> = std::result::Result<T, ParseError>;
+
 #[tracing::instrument(skip(document))]
-pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) async fn parse(document: &Html) -> Result<()> {
     let selector_pricelist = Selector::parse(r#".PriceList"#).expect("invalid list selector");
     let selector_priceitem = Selector::parse(r#".PriceList__item"#).expect("invalid list item selector");
     let selector_name = Selector::parse(r#".PriceList__itemTitle"#).expect("invalid name selector");
@@ -34,7 +37,7 @@ pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Err
                 info!("name={name}, price={price:.3}, updated={updated}, addr='{addr}'");
             }
             Err(err) => {
-                error!("parsing error {} at: {}", err, elem.inner_html());
+                error!("{}: {}", err, elem.inner_html());
             }
         }
     }
@@ -43,24 +46,30 @@ pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Err
 }
 
 #[tracing::instrument(skip(fragment))]
-async fn parse_text<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<String, Box<dyn std::error::Error>> {
+async fn parse_text<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<String> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\b.+\b").expect("invalid text regex");
     }
 
-    let text = fragment.select(selector).next().expect("no more name");
+    let text = fragment.select(selector).next().ok_or(ParseError::HtmlSelectError{
+            html: fragment.inner_html(),
+            selector: selector.clone(),
+        })?;
     let text = text.inner_html();
     let text = REGEX.find_iter(&text).map(|mat| mat.as_str()).next().expect("text regex mismatch");
     Ok(text.to_owned())
 }
 
 #[tracing::instrument(skip(fragment))]
-async fn parse_updated<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<DateTime<Local>, Box<dyn std::error::Error>> {
+async fn parse_updated<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -> Result<DateTime<Local>> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r#"(?P<d>\d{2})\.(?P<m>\d{2})\..(?P<h>\d{2}):(?P<min>\d{2})"#).expect("invalid updated regex");
     }
 
-    let updated = fragment.select(selector).next().expect("no more updated");
+    let updated = fragment.select(selector).next().ok_or(ParseError::HtmlSelectError{
+            html: fragment.inner_html(),
+            selector: selector.clone(),
+        })?;
     let updated = updated.inner_html();
     let updated = REGEX.captures(&updated).expect("updated regex mismatch");
 
@@ -85,14 +94,20 @@ async fn parse_updated<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector
 }
 
 #[tracing::instrument(skip(fragment))]
-async fn parse_price<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector, selector_sup: &'b Selector) -> Result<f32, Box<dyn std::error::Error>> {
+async fn parse_price<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector, selector_sup: &'b Selector) -> Result<f32> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"[0-9]\.[0-9]+").expect("invalid price regex");
         static ref REGEX_SUP: Regex = Regex::new(r"[0-9]").expect("invalid price-sub regex");
     }
 
-    let price = fragment.select(selector).next().expect("no more price");
-    let price_sup = price.select(selector_sup).next().expect("no sup-price found");
+    let price = fragment.select(selector).next().ok_or(ParseError::HtmlSelectError{
+            html: fragment.inner_html(),
+            selector: selector.clone(),
+        })?;
+    let price_sup = price.select(selector_sup).next().ok_or(ParseError::HtmlSelectError{
+            html: fragment.inner_html(),
+            selector: selector.clone(),
+        })?;
 
     let price = price.inner_html();
     let price_sup = price_sup.inner_html();
@@ -100,7 +115,11 @@ async fn parse_price<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector, 
     let price = REGEX.find_iter(&price).map(|mat| mat.as_str()).next().expect("price regex mismatch");
     let price_sup = REGEX_SUP.find_iter(&price_sup).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch");
 
-    let price = format!("{price}{price_sup}").parse()?;
+    let price = format!("{price}{price_sup}")
+        .parse().map_err(|_| ParseError::PriceParseFloatError{
+            price: price.to_owned(),
+            price_sup: price_sup.to_owned()
+        })?;
     Ok(price)
 }
 
