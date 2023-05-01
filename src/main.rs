@@ -1,4 +1,5 @@
 mod download;
+mod error;
 mod load;
 mod parse;
 mod save;
