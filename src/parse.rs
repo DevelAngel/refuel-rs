@@ -15,7 +15,7 @@ type Result<T> = std::result::Result<T, ParseError>;
 #[tracing::instrument(skip(document))]
 pub(crate) async fn parse(document: &Html) -> Result<()> {
     let selector_pricelist = Selector::parse(r#".PriceList"#).expect("invalid list selector");
-    let selector_priceitem = Selector::parse(r#".PriceList__item"#).expect("invalid list item selector");
+    let selector_priceitem = Selector::parse(r#".PriceList__item:not(.list-ad)"#).expect("invalid list item selector");
     let selector_name = Selector::parse(r#".PriceList__itemTitle"#).expect("invalid name selector");
     let selector_addr = Selector::parse(r#".PriceList__itemSubtitle"#).expect("invalid addr selector");
     let selector_updated = Selector::parse(r#".PriceList__itemUpdated"#).expect("invalid updated selector");
