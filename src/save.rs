@@ -21,6 +21,6 @@ pub(crate) async fn save_file(document: &Html, filename: &PathBuf) -> io::Result
     let mut out = File::create(filename)?;
     out.write_all(html.as_bytes())?;
     out.sync_all()?;
-    info!("document saved to file: {}", filename.display());
+    info!("document saved to file");
     Ok(())
 }
