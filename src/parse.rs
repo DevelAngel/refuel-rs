@@ -7,7 +7,7 @@ use chrono::{DateTime, TimeZone, Local};
 
 use tokio::try_join;
 
-use tracing::{debug, info};
+use tracing::{debug, info, error};
 
 #[tracing::instrument(skip(document))]
 pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Error>> {
@@ -29,8 +29,14 @@ pub(crate) async fn parse(document: &Html) -> Result<(), Box<dyn std::error::Err
         let updated = parse_updated(&elem, &selector_updated);
         let price = parse_price(&elem, &selector_price, &selector_supprice);
 
-        let (name, addr, updated, price) = try_join!(name, addr, updated, price)?;
-        info!("name={name}, price={price:.3}, updated={updated}, addr='{addr}'");
+        match try_join!(name, addr, updated, price) {
+            Ok((name, addr, updated, price)) => {
+                info!("name={name}, price={price:.3}, updated={updated}, addr='{addr}'");
+            }
+            Err(err) => {
+                error!("parsing error {} at: {}", err, elem.inner_html());
+            }
+        }
     }
 
     Ok(())
@@ -43,8 +49,9 @@ async fn parse_text<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector) -
     }
 
     let text = fragment.select(selector).next().expect("no more name");
-    let text = REGEX.find_iter(&text.inner_html()).map(|mat| mat.as_str()).next().expect("text regex mismatch").to_owned();
-    Ok(text)
+    let text = text.inner_html();
+    let text = REGEX.find_iter(&text).map(|mat| mat.as_str()).next().expect("text regex mismatch");
+    Ok(text.to_owned())
 }
 
 #[tracing::instrument(skip(fragment))]
@@ -87,11 +94,13 @@ async fn parse_price<'a, 'b>(fragment: &ElementRef<'a>, selector: &'b Selector, 
     let price = fragment.select(selector).next().expect("no more price");
     let price_sup = price.select(selector_sup).next().expect("no sup-price found");
 
-    let price = REGEX.find_iter(&price.inner_html()).map(|mat| mat.as_str()).next().expect("price regex mismatch").to_owned();
-    let price_sup = REGEX_SUP.find_iter(&price_sup.inner_html()).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch").to_owned();
+    let price = price.inner_html();
+    let price_sup = price_sup.inner_html();
 
-    let price = format!("{price}{price_sup}");
-    let price = price.parse()?;
+    let price = REGEX.find_iter(&price).map(|mat| mat.as_str()).next().expect("price regex mismatch");
+    let price_sup = REGEX_SUP.find_iter(&price_sup).map(|mat| mat.as_str()).next().expect("price-sup regex mismatch");
+
+    let price = format!("{price}{price_sup}").parse()?;
     Ok(price)
 }
 
