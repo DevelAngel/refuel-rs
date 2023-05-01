@@ -2,11 +2,11 @@ use scraper::Html;
 
 use tracing::info;
 
-#[tracing::instrument(skip(url))]
-pub(crate) async fn download(url: &str) -> Html {
-    let resp = reqwest::get(url).await.expect("download failed");
-    info!("downloaded: {}", resp.url());
-
-    let text = resp.text().await.expect("download text failed");
-    Html::parse_document(&text)
+#[tracing::instrument]
+pub(crate) async fn download(url: &str) -> Result<Html, Box<dyn std::error::Error>> {
+    let resp = reqwest::get(url).await?;
+    let document = resp.text().await?;
+    let document = Html::parse_document(&document);
+    info!("document downloaded");
+    Ok(document)
 }
