@@ -18,12 +18,6 @@ pub enum ParseError {
         "converting the price to float type failed (price {price:?}, price sup: {price_sup:?})"
     )]
     PriceParseFloatError { price: String, price_sup: String },
-    #[error("data store disconnected")]
-    Disconnect(#[from] num::ParseIntError),
-    #[error("the data for key `{0}` is not available")]
-    Redaction(String),
-    #[error("invalid header (expected {expected:?}, found {found:?})")]
-    InvalidHeader { expected: String, found: String },
-    #[error("unknown data store error")]
-    Unknown,
+    #[error("string to number convertion error")]
+    ParseIntError(#[from] num::ParseIntError),
 }

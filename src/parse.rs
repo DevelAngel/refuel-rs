@@ -1,19 +1,21 @@
 use crate::error::ParseError;
+use crate::refuel_station::RefuelStation;
 
 use scraper::{Html, ElementRef, Selector};
 
 use lazy_static::lazy_static;
 use regex::Regex;
 use chrono::{DateTime, TimeZone, Local};
+use std::collections::VecDeque;
 
 use tokio::try_join;
 
-use tracing::{debug, info, error};
+use tracing::{debug, error};
 
 type Result<T> = std::result::Result<T, ParseError>;
 
 #[tracing::instrument(skip(document))]
-pub(crate) async fn parse(document: &Html) -> Result<()> {
+pub(crate) async fn parse(document: &Html) -> Result<VecDeque<RefuelStation>> {
     let selector_pricelist = Selector::parse(r#".PriceList"#).expect("invalid list selector");
     let selector_priceitem = Selector::parse(r#".PriceList__item:not(.list-ad)"#).expect("invalid list item selector");
     let selector_name = Selector::parse(r#".PriceList__itemTitle"#).expect("invalid name selector");
@@ -22,6 +24,7 @@ pub(crate) async fn parse(document: &Html) -> Result<()> {
     let selector_price = Selector::parse(r#".PriceList__itemPrice"#).expect("invalid price selector");
     let selector_supprice = Selector::parse(r#".sup"#).expect("invalid price-sub selector");
 
+    let mut refuel_stations = VecDeque::with_capacity(20);
     let document = document.select(&selector_pricelist).next().expect("list not found");
     for elem in document.select(&selector_priceitem) {
         let name = parse_text(&elem, &selector_name);
@@ -31,7 +34,8 @@ pub(crate) async fn parse(document: &Html) -> Result<()> {
 
         match try_join!(name, addr, price, updated) {
             Ok((name, addr, price, updated)) => {
-                info!("updated: {updated}\nprice: {price:.3}\nname: {name}\naddr: {addr}");
+                let updated = updated.into();
+                refuel_stations.push_back(RefuelStation { name, addr, price, updated });
             }
             Err(err) => {
                 match err {
@@ -47,7 +51,7 @@ pub(crate) async fn parse(document: &Html) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(refuel_stations)
 }
 
 #[tracing::instrument(skip(fragment))]

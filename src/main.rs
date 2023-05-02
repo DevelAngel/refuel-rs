@@ -2,6 +2,7 @@ mod download;
 mod error;
 mod load;
 mod parse;
+mod refuel_station;
 mod save;
 
 use crate::download::*;
@@ -14,7 +15,7 @@ use std::path::PathBuf;
 
 use tracing_subscriber::EnvFilter;
 
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -58,7 +59,10 @@ async fn cmd_run(url: &str, downloaded: &Option<PathBuf>) -> Result<(), Box<dyn 
     } else {
         download(url).await?
     };
-    parse(&document).await?;
+    let refuel_stations = parse(&document).await?;
+    for rs in refuel_stations {
+        info!("name: {}, addr: {}, price: {:.3}, updated: {}", rs.name, rs.addr, rs.price, rs.updated);
+    }
     Ok(())
 }
 
