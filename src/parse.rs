@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::refuel_station::RefuelStation;
+use crate::models::RefuelStation;
 
 use scraper::{Html, ElementRef, Selector};
 
