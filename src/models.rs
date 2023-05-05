@@ -1,8 +1,52 @@
-use chrono::{DateTime, Utc};
+use super::schema::price_changes;
 
-pub(crate) struct RefuelStation {
+use diesel::prelude::*;
+
+use chrono::{DateTime, NaiveDateTime, Utc};
+
+#[derive(Queryable)]
+pub(crate) struct RefuelStationPriceChange {
     pub name: String,
     pub addr: String,
-    pub price: f32,
     pub updated: DateTime<Utc>,
+    pub price: u16,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = price_changes)]
+struct NewRefuelStationPriceChange<'a> {
+    name: &'a str,
+    addr: &'a str,
+    updated: NaiveDateTime,
+    price: i32,
+}
+
+impl RefuelStationPriceChange {
+    pub(crate) fn save(&self, conn: &mut SqliteConnection) {
+        let new = NewRefuelStationPriceChange::from(self);
+        new.insert(conn);
+    }
+}
+
+impl<'a> NewRefuelStationPriceChange<'a> {
+    pub(crate) fn insert(self, conn: &mut SqliteConnection) {
+        use crate::schema::price_changes::dsl::*;
+
+        let _rows_inserted = diesel::insert_into(price_changes)
+            .values(self)
+            .on_conflict_do_nothing()
+            .execute(conn)
+            .expect("Error saving new station");
+    }
+}
+
+impl<'a> From<&'a RefuelStationPriceChange> for NewRefuelStationPriceChange<'a> {
+    fn from(src: &'a RefuelStationPriceChange) -> Self {
+        Self {
+            name: &src.name,
+            addr: &src.addr,
+            updated: src.updated.naive_utc(),
+            price: src.price.into(),
+        }
+    }
 }
