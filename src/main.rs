@@ -17,12 +17,13 @@ use std::path::PathBuf;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
+use tokio::signal;
 use tokio::time::{self, Duration};
 use rand::prelude::*;
 
 use tracing_subscriber::EnvFilter;
 
-use tracing::{error, info, debug};
+use tracing::{warn, info, debug};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -92,11 +93,18 @@ async fn cmd_run_single(url: &str, downloaded: &Option<PathBuf>) -> Result<(), B
 
     let conn = &mut establish_connection();
 
-    for rs in refuel_stations {
+    let mut saved = 0;
+    for rs in refuel_stations.iter() {
         let price = rs.price as f32 / 1000f32;
-        debug!("name: {}, addr: {}, updated: {}, price: {:.3}", rs.name, rs.addr, rs.updated, price);
-        rs.save(conn);
+        if rs.save(conn) {
+            saved += 1;
+            debug!("name: {}, addr: {}, updated: {}, price: {:.3}", rs.name, rs.addr, rs.updated, price);
+        } else if downloaded.is_some() {
+            // print all
+            debug!("name: {}, addr: {}, updated: {}, price: {:.3}", rs.name, rs.addr, rs.updated, price);
+        }
     }
+    info!("price changes saved: {saved} / {fetched}", fetched = refuel_stations.len());
     Ok(())
 }
 
@@ -109,8 +117,21 @@ async fn cmd_run_loop(url: &str) -> Result<(), Box<dyn std::error::Error>> {
 
         let sleep_time = calc_duration(&mut rng, &interval); // 10min .. 30min
         info!("sleep for {:.2} min..", sleep_time.as_secs_f32() / 60.0);
-        time::sleep(sleep_time).await;
+
+        let mut shutdown = false;
+        tokio::select! {
+            _ = signal::ctrl_c() => {
+                warn!("CTRL+C pressed -> shutdown..");
+                shutdown = true;
+            }
+            _ = time::sleep(sleep_time) => {}
+        }
+        if shutdown {
+            break;
+        }
     }
+    info!("graceful shutdown");
+    Ok(())
 }
 
 #[tokio::main]
