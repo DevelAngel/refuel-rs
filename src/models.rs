@@ -4,6 +4,8 @@ use diesel::prelude::*;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 
+use tracing::info;
+
 #[derive(Queryable)]
 pub(crate) struct RefuelStationPriceChange {
     pub name: String,
@@ -22,21 +24,22 @@ struct NewRefuelStationPriceChange<'a> {
 }
 
 impl RefuelStationPriceChange {
-    pub(crate) fn save(&self, conn: &mut SqliteConnection) {
+    pub(crate) fn save(&self, conn: &mut SqliteConnection) -> bool {
         let new = NewRefuelStationPriceChange::from(self);
-        new.insert(conn);
+        new.insert(conn)
     }
 }
 
 impl<'a> NewRefuelStationPriceChange<'a> {
-    pub(crate) fn insert(self, conn: &mut SqliteConnection) {
+    pub(crate) fn insert(self, conn: &mut SqliteConnection) -> bool {
         use crate::schema::price_changes::dsl::*;
 
-        let _rows_inserted = diesel::insert_into(price_changes)
+        let inserted = diesel::insert_into(price_changes)
             .values(self)
             .on_conflict_do_nothing()
             .execute(conn)
             .expect("Error saving new station");
+        inserted > 0
     }
 }
 
