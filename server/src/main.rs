@@ -8,7 +8,6 @@ mod schema;
 
 use crate::download::*;
 use crate::load::*;
-use crate::models::*;
 use crate::parse::*;
 use crate::save::*;
 
