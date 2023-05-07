@@ -4,8 +4,6 @@ use diesel::prelude::*;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 
-use tracing::info;
-
 #[derive(Queryable)]
 pub(crate) struct RefuelStationPriceChange {
     pub name: String,
