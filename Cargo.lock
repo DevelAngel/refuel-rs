@@ -1472,7 +1472,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "refuel"
+name = "refuel-client"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
+name = "refuel-server"
 version = "0.1.0"
 dependencies = [
  "chrono",
