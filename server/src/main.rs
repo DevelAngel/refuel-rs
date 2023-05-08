@@ -1,5 +1,6 @@
 mod download;
 mod error;
+mod grpc;
 mod load;
 mod models;
 mod parse;
@@ -7,6 +8,7 @@ mod save;
 mod schema;
 
 use crate::download::*;
+use crate::grpc::*;
 use crate::load::*;
 use crate::parse::*;
 use crate::save::*;
@@ -48,6 +50,8 @@ enum Commands {
     },
     /// Normal mode
     Run,
+    /// Test gRPC helloworld service
+    TestService,
 }
 
 fn calc_duration<R: Rng>(rng: &mut R, interval: &Duration) -> Duration {
@@ -133,6 +137,12 @@ async fn cmd_run_loop(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[tracing::instrument]
+async fn cmd_test_service() -> Result<(), Box<dyn std::error::Error>> {
+    service().await?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
@@ -149,6 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Commands::Download { out }) => { cmd_download(url, out).await? }
         Some(Commands::RunSingle { downloaded }) => { cmd_run_single(url, downloaded).await? }
         Some(Commands::Run) => { cmd_run_loop(url).await? }
+        Some(Commands::TestService) => { cmd_test_service().await? }
         None => { cmd_run_loop(url).await? }
     }
 
