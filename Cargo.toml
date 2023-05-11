@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "webapp-sim",
     "server",
     "client",
 ]
