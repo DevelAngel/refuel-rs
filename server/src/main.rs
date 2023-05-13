@@ -13,11 +13,12 @@ use crate::load::*;
 use crate::parse::*;
 use crate::save::*;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, Args};
 use std::path::PathBuf;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
+use url::Url;
 use tokio::signal;
 use tokio::time::{self, Duration};
 use rand::prelude::*;
@@ -29,27 +30,41 @@ use tracing::{warn, info, debug};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
+#[command(args_conflicts_with_subcommands = true)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
+    #[clap(flatten)]
+    common: CommonArgs,
+}
+
+#[derive(Args)]
+pub struct CommonArgs {
+    #[arg(short, long, value_name = "URL", default_value_t = Url::parse("http://localhost:8080").unwrap())]
+    /// Url of the webapp
+    url: Url,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// Download only mode
     Download {
+        #[clap(flatten)]
+        common: CommonArgs,
         #[arg(short, long, value_name = "FILE")]
         /// Filename of downloaded html document
         out: Option<PathBuf>,
     },
     /// Normal mode but only one run
     RunSingle {
+        #[clap(flatten)]
+        common: CommonArgs,
         #[arg(short, long, value_name = "FILE")]
         /// Use downloaded html document
         downloaded: Option<PathBuf>,
     },
     /// Normal mode
-    Run,
+    Run ( CommonArgs ),
     /// Test gRPC helloworld service
     TestService,
 }
@@ -74,7 +89,7 @@ fn establish_connection() -> SqliteConnection {
 }
 
 #[tracing::instrument(skip(url))]
-async fn cmd_download(url: &str, filename: &Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+async fn cmd_download(url: &Url, filename: &Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
     let document = download(url).await?;
     if let Some(filename) = filename.as_ref() {
         save_file(&document, filename).await?;
@@ -85,7 +100,7 @@ async fn cmd_download(url: &str, filename: &Option<PathBuf>) -> Result<(), Box<d
 }
 
 #[tracing::instrument(skip(url))]
-async fn cmd_run_single(url: &str, downloaded: &Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+async fn cmd_run_single(url: &Url, downloaded: &Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
     let document = if let Some(downloaded) = downloaded {
         load_file(downloaded).await?
     } else {
@@ -112,7 +127,7 @@ async fn cmd_run_single(url: &str, downloaded: &Option<PathBuf>) -> Result<(), B
 }
 
 #[tracing::instrument(skip(url))]
-async fn cmd_run_loop(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn cmd_run_loop(url: &Url) -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
     let interval = Duration::from_secs(20 * 60); // 20 min
     loop {
@@ -152,15 +167,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let cli = Cli::parse();
+    let command = &cli.command.unwrap_or(Commands::Run(cli.common));
 
-    let url = "https://mehr-tanken.de/tankstellen?searchText=Berlin&brand=0&fuel=1&range=15&order=date";
-
-    match &cli.command {
-        Some(Commands::Download { out }) => { cmd_download(url, out).await? }
-        Some(Commands::RunSingle { downloaded }) => { cmd_run_single(url, downloaded).await? }
-        Some(Commands::Run) => { cmd_run_loop(url).await? }
-        Some(Commands::TestService) => { cmd_test_service().await? }
-        None => { cmd_run_loop(url).await? }
+    match command {
+        Commands::Download { common, out } => { cmd_download(&common.url, out).await? }
+        Commands::RunSingle { common, downloaded } => { cmd_run_single(&common.url, downloaded).await? }
+        Commands::Run ( common ) => { cmd_run_loop(&common.url).await? }
+        Commands::TestService => { cmd_test_service().await? }
     }
 
     Ok(())
