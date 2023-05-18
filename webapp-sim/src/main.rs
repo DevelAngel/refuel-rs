@@ -1,13 +1,23 @@
 use std::net::SocketAddr;
 
-use axum::{response::Html, routing::get, Router};
+use askama::Template;
+use askama_axum::{IntoResponse, Response};
+use axum::{routing::get, Router};
 
 use tracing_subscriber::EnvFilter;
 
 use tracing::info;
 
-async fn home() -> Html<&'static str> {
-    Html("Hello world")
+
+#[derive(Template)]
+#[template(path = "hello.html")]
+struct HelloTemplate<'a> {
+    name: &'a str,
+}
+
+async fn home() -> Response {
+    let hello = HelloTemplate { name: "world" };
+    hello.into_response()
 }
 
 #[tokio::main]
