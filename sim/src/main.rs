@@ -1,13 +1,15 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use askama::Template;
 use askama_axum::{IntoResponse, Response};
-use axum::{routing::get, Router};
+use axum::{extract::State, routing::get, Router};
+use axum_macros::debug_handler;
+use tokio::sync::RwLock;
 
 use tracing_subscriber::EnvFilter;
 
 use tracing::info;
-
 
 #[derive(Template)]
 #[template(path = "hello.html")]
@@ -15,8 +17,15 @@ struct HelloTemplate<'a> {
     name: &'a str,
 }
 
-async fn home() -> Response {
-    let hello = HelloTemplate { name: "world" };
+#[derive(Clone)]
+struct AppState {
+    data: Vec<u8>
+}
+
+#[debug_handler]
+async fn home(State(state): State<AppState>) -> Response {
+    let data = state.data[0];
+    let hello = HelloTemplate { name: &data.to_string() };
     hello.into_response()
 }
 
@@ -28,8 +37,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compact()
         .init();
 
+    let state = AppState { data: vec![1,2,3,4] };
+
     let app = Router::new()
-        .route("/", get(home));
+        .route("/", get(home))
+        .with_state(state);
 
     let addr: SocketAddr = "127.0.0.1:8080".parse().expect("invalid socket address");
     info!("listening on http://{}", addr.to_string());
