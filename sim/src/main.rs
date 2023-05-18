@@ -23,8 +23,9 @@ struct AppState {
 }
 
 #[debug_handler]
-async fn home(State(state): State<AppState>) -> Response {
-    let data = state.data[0];
+async fn home(State(state): State<Arc<RwLock<AppState>>>) -> Response {
+    let state = state.read().await;
+    let data = state.data[1];
     let hello = HelloTemplate { name: &data.to_string() };
     hello.into_response()
 }
@@ -38,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let state = AppState { data: vec![1,2,3,4] };
+    let state = Arc::new(RwLock::new(state));
 
     let app = Router::new()
         .route("/", get(home))
