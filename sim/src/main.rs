@@ -6,10 +6,12 @@ use askama_axum::{IntoResponse, Response};
 use axum::{extract::State, routing::get, Router};
 use axum_macros::debug_handler;
 use tokio::sync::RwLock;
+use tokio::time::{sleep, Duration};
+use tokio::try_join;
 
 use tracing_subscriber::EnvFilter;
 
-use tracing::info;
+use tracing::{info, error};
 
 #[derive(Template)]
 #[template(path = "hello.html")]
@@ -25,9 +27,17 @@ struct AppState {
 #[debug_handler]
 async fn home(State(state): State<Arc<RwLock<AppState>>>) -> Response {
     let state = state.read().await;
-    let data = state.data[1];
+    let data = state.data.len();
     let hello = HelloTemplate { name: &data.to_string() };
     hello.into_response()
+}
+
+async fn change_state(state: Arc<RwLock<AppState>>) -> Result<(), hyper::Error> {
+    loop {
+        sleep(Duration::from_millis(5000)).await;
+        let mut state = state.write().await;
+        state.data.push(9);
+    }
 }
 
 #[tokio::main]
@@ -43,13 +53,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/", get(home))
-        .with_state(state);
+        .with_state(Arc::clone(&state));
 
     let addr: SocketAddr = "127.0.0.1:8080".parse().expect("invalid socket address");
     info!("listening on http://{}", addr.to_string());
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    let service = axum::Server::bind(&addr)
+        .serve(app.into_make_service());
+
+    let change_state = change_state(Arc::clone(&state));
+
+    match try_join!(service, change_state) {
+        Ok(_) => {info!("good bye");}
+        Err(_) => {error!("bah, good bye");}
+    }
 
     Ok(())
 }
