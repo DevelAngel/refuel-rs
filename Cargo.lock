@@ -1624,6 +1624,7 @@ dependencies = [
  "askama_axum",
  "axum",
  "axum-macros",
+ "hyper",
  "tokio",
  "tracing",
  "tracing-subscriber",
