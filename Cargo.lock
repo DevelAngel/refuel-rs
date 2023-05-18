@@ -1605,7 +1605,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "refuel-webapp-sim"
+name = "refuel-sim"
 version = "0.1.0"
 dependencies = [
  "askama",
