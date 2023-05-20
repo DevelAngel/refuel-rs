@@ -8,36 +8,79 @@ use axum_macros::debug_handler;
 use tokio::sync::RwLock;
 use tokio::time::{sleep, Duration};
 use tokio::try_join;
+use chrono::{DateTime, Local};
 
 use tracing_subscriber::EnvFilter;
 
 use tracing::{info, error};
 
+
+#[derive(Clone)]
+struct RefuelStationData {
+    name: String,
+    addr: String,
+    updated: DateTime<Local>,
+    price: [u8; 3],
+}
+
+impl RefuelStationData {
+    fn new(name: &str, addr: &str, price: [u8; 3]) -> Self {
+        let name = name.to_owned();
+        let addr = addr.to_owned();
+        let updated = Local::now();
+        Self { name, addr, updated, price }
+    }
+
+    fn update(&mut self, price: [u8; 3]) {
+        let updated = Local::now();
+        self.price = price;
+        self.updated = updated;
+    }
+}
+
 #[derive(Template)]
-#[template(path = "hello.html")]
-struct HelloTemplate<'a> {
-    name: &'a str,
-    data: &'a [u8],
+#[template(path = "home.html")]
+struct HomeTemplate<'a> {
+    price_list: &'a [RefuelStationData],
 }
 
 #[derive(Clone)]
 struct AppState {
-    data: Vec<u8>
+    data: Vec<RefuelStationData>
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        let data = vec![
+            RefuelStationData::new("MyESSO", "Marienfelder Chaussee 171, 12349 Berlin", [1, 78, 9]),
+            RefuelStationData::new("MyJET", "Rhinstr. 240, 13055 Berlin", [1, 79, 8]),
+            RefuelStationData::new("MyTotalEnergies", "Landsberger Allee 376, 12681 Berlin", [1, 81, 9]),
+            RefuelStationData::new("MyAGIP ENI", "Dietzgenstr. 127, 13158 Berlin", [1, 80, 9]),
+            RefuelStationData::new("MyHEM", "Wittestr. 16, 13509 Berlin", [1, 76, 9]),
+            RefuelStationData::new("MySTAR", "Prenzlauer Promenade 72-73, 13089 Berlin", [1, 77, 9]),
+            RefuelStationData::new("MySHELL", "Bundesallee 200, 10717 Berlin", [1, 82, 9]),
+        ];
+        Self { data }
+    }
 }
 
 #[debug_handler]
 async fn home(State(state): State<Arc<RwLock<AppState>>>) -> Response {
     let state = state.read().await;
     let data = &state.data;
-    let hello = HelloTemplate { name: &data.len().to_string(), data: &data };
-    hello.into_response()
+    HomeTemplate { price_list: &data }.into_response()
 }
 
 async fn change_state(state: Arc<RwLock<AppState>>) -> Result<(), hyper::Error> {
+    let mut i = 0;
     loop {
-        sleep(Duration::from_millis(5000)).await;
+        sleep(Duration::from_secs(60)).await;
         let mut state = state.write().await;
-        state.data.push(9);
+        let len = state.data.len() as u8;
+        let index: usize = (i % len).into();
+        state.data[index].update([1, 75 + i, 9]);
+        info!("{} updated", state.data[index].name);
+        i = (i + 1) % (len * 2);
     }
 }
 
@@ -49,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compact()
         .init();
 
-    let state = AppState { data: vec![1,2,3,4] };
+    let state = AppState::default();
     let state = Arc::new(RwLock::new(state));
 
     let app = Router::new()
