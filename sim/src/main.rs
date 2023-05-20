@@ -17,6 +17,7 @@ use tracing::{info, error};
 #[template(path = "hello.html")]
 struct HelloTemplate<'a> {
     name: &'a str,
+    data: &'a [u8],
 }
 
 #[derive(Clone)]
@@ -27,8 +28,8 @@ struct AppState {
 #[debug_handler]
 async fn home(State(state): State<Arc<RwLock<AppState>>>) -> Response {
     let state = state.read().await;
-    let data = state.data.len();
-    let hello = HelloTemplate { name: &data.to_string() };
+    let data = &state.data;
+    let hello = HelloTemplate { name: &data.len().to_string(), data: &data };
     hello.into_response()
 }
 
