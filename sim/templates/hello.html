@@ -1,9 +1,0 @@
-Hello, {{ name }}!
-Your numbers:
-{%~ for num in data -%}
-  {% if loop.first -%}
-    {{ num }}
-  {%- else -%}
-    , {{ num }}
-  {%- endif %}
-{%- endfor %}
