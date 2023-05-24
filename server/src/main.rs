@@ -62,9 +62,18 @@ enum Commands {
         #[arg(short, long, value_name = "FILE")]
         /// Use downloaded html document
         downloaded: Option<PathBuf>,
+        #[arg(long)]
+        /// do not save to database
+        dry_run: bool,
     },
     /// Normal mode
-    Run ( CommonArgs ),
+    Run {
+        #[clap(flatten)]
+        common: CommonArgs,
+        #[arg(long)]
+        /// do not save to database
+        dry_run: bool,
+    },
     /// Test gRPC helloworld service
     TestService,
 }
@@ -100,7 +109,7 @@ async fn cmd_download(url: &Url, filename: &Option<PathBuf>) -> Result<(), Box<d
 }
 
 #[tracing::instrument(skip(url))]
-async fn cmd_run_single(url: &Url, downloaded: &Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+async fn cmd_run_single(url: &Url, downloaded: &Option<PathBuf>, dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
     let document = if let Some(downloaded) = downloaded {
         load_file(downloaded).await?
     } else {
@@ -114,24 +123,29 @@ async fn cmd_run_single(url: &Url, downloaded: &Option<PathBuf>) -> Result<(), B
     let mut saved = 0;
     for rs in refuel_stations.iter() {
         let price = rs.price as f32 / 1000f32;
-        if rs.save(conn) {
+        if rs.save(conn) && !dry_run {
             saved += 1;
             debug!("name: {}, addr: {}, updated: {}, price: {:.3}", rs.name, rs.addr, rs.updated, price);
-        } else if downloaded.is_some() {
+        } else if downloaded.is_some() || dry_run {
             // print all
             debug!("name: {}, addr: {}, updated: {}, price: {:.3}", rs.name, rs.addr, rs.updated, price);
         }
     }
-    info!("price changes saved: {saved} / {fetched}", fetched = refuel_stations.len());
+    if dry_run {
+        info!("prices fetched: {fetched}", fetched = refuel_stations.len());
+        warn!("price changes not saved");
+    } else {
+        info!("price changes saved: {saved} / {fetched}", fetched = refuel_stations.len());
+    }
     Ok(())
 }
 
 #[tracing::instrument(skip(url))]
-async fn cmd_run_loop(url: &Url) -> Result<(), Box<dyn std::error::Error>> {
+async fn cmd_run_loop(url: &Url, dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
     let interval = Duration::from_secs(20 * 60); // 20 min
     loop {
-        cmd_run_single(url, &None).await?;
+        cmd_run_single(url, &None, dry_run).await?;
 
         let sleep_time = calc_duration(&mut rng, &interval); // 10min .. 30min
         info!("sleep for {:.2} min..", sleep_time.as_secs_f32() / 60.0);
@@ -167,12 +181,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let cli = Cli::parse();
-    let command = &cli.command.unwrap_or(Commands::Run(cli.common));
+    let command = &cli.command.unwrap_or(Commands::Run {
+        common: cli.common,
+        dry_run: false,
+    });
 
     match command {
         Commands::Download { common, out } => { cmd_download(&common.url, out).await? }
-        Commands::RunSingle { common, downloaded } => { cmd_run_single(&common.url, downloaded).await? }
-        Commands::Run ( common ) => { cmd_run_loop(&common.url).await? }
+        Commands::RunSingle { common, downloaded, dry_run } => { cmd_run_single(&common.url, downloaded, dry_run.to_owned()).await? }
+        Commands::Run { common, dry_run } => { cmd_run_loop(&common.url, dry_run.to_owned()).await? }
         Commands::TestService => { cmd_test_service().await? }
     }
 
