@@ -4,6 +4,8 @@ use crate::types::StationPriceChange;
 use chrono::prelude::*;
 use leptos::*;
 use leptos_router::*;
+use leptos_chart::*;
+use theta_chart::series::{SNumber, STime};
 
 #[component]
 pub fn PriceHistory(cx: Scope) -> impl IntoView {
@@ -93,6 +95,29 @@ pub fn StationPriceHistory(cx: Scope) -> impl IntoView {
                         )}}
                     </tbody>
                 </table>
+                {move || { list.read(cx).map(|list| {
+                    let (list_price, list_updated): (Vec<_>, Vec<_>) = list.into_iter()
+                        .map(|n| (
+                            n.price[0] as f64 + 0.01f64 * n.price[1] as f64 + 0.001f64 * n.price[2] as f64,
+                            n.updated.naive_local()
+                        ))
+                        .unzip();
+                    let list_updated = STime::new(list_updated)
+                        .set_format("%m");
+                    let list_price = SNumber::new(list_price)
+                        .set_range(1.6, 2.0);
+
+                    let chart = Cartesian::new(
+                            Series::Time(list_updated),
+                            Series::Number(list_price),
+                        )
+                        .set_view(820, 620, 3, 100, 100, 20);
+
+                    view! {
+                        cx,
+                        <LineChart chart=chart />
+                    }
+                })}}
             </Suspense>
         </div>
     }
