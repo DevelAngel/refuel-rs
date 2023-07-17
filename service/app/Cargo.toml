@@ -12,6 +12,8 @@ chrono = { workspace = true, features = ["serde"] }
 leptos = { workspace = true, features = ["serde"] }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
+leptos_chart = { workspace = true, features = ["LineChart"] }
+theta-chart = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true, features = ["time"], optional = true }
 tracing = { workspace = true }
@@ -22,11 +24,13 @@ hydrate = [
 	"leptos/hydrate",
 	"leptos_meta/hydrate",
 	"leptos_router/hydrate",
+	"leptos_chart/hydrate"
 ]
 ssr = [
 	"leptos/ssr",
 	"leptos_meta/ssr",
 	"leptos_router/ssr",
+	"leptos_chart/ssr",
 	"dep:refuel-db",
 	"dep:tokio"
 ]
