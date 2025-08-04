@@ -4,9 +4,9 @@ use crate::current_prices::CurrentPrices;
 use crate::price_history::PriceHistory;
 use crate::price_history::StationPriceHistory;
 
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::components::{A, Router, Routes, Route};
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {

@@ -2,7 +2,7 @@ use crate::types::StationPriceChange;
 use crate::price_list::PriceListItem;
 
 use chrono::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn AllPrices(cx: Scope) -> impl IntoView {

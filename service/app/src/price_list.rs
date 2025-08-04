@@ -1,7 +1,7 @@
 use crate::types::StationPriceChange;
 
 use chrono::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub(crate) fn PriceListItem(cx: Scope, item: StationPriceChange) -> impl IntoView {

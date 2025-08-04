@@ -2,8 +2,10 @@ use crate::types::Station;
 use crate::types::StationPriceChange;
 
 use chrono::prelude::*;
-use leptos::*;
-use leptos_router::*;
+use leptos::prelude::*;
+use leptos_router::components::A;
+use leptos_router::hooks::use_params_map;
+use leptos_router::nested_router::Outlet;
 
 #[component]
 pub fn PriceHistory(cx: Scope) -> impl IntoView {
