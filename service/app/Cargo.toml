@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 refuel-db = { path = "../db", optional = true }
 chrono = { workspace = true, features = ["serde"] }
-leptos = { workspace = true, features = ["serde"] }
+leptos = { workspace = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 serde = { workspace = true }
@@ -18,15 +18,11 @@ tracing = { workspace = true }
 
 [features]
 default = ["hydrate"]
-hydrate = [
-	"leptos/hydrate",
-	"leptos_meta/hydrate",
-	"leptos_router/hydrate",
-]
+hydrate = ["leptos/hydrate"]
 ssr = [
 	"leptos/ssr",
 	"leptos_meta/ssr",
 	"leptos_router/ssr",
 	"dep:refuel-db",
-	"dep:tokio"
+	"dep:tokio",
 ]

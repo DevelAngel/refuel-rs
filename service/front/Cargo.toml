@@ -2,7 +2,7 @@
 name = "refuel-front"
 version.workspace = true
 authors.workspace = true
-edition = "2021"
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,8 +12,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 refuel-app = { path = "../app", features = ["hydrate"] }
 console_error_panic_hook = "0.1"
-leptos = { workspace = true, features = ["hydrate", "serde"] }
+leptos = { workspace = true, features = ["hydrate"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-wasm-bindgen = "0.2"
-tracing-wasm = "0.2.1"
+wasm-bindgen = "0.2.88"
+tracing-wasm = "0.2"
