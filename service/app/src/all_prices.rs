@@ -1,27 +1,23 @@
-use crate::types::StationPriceChange;
 use crate::price_list::PriceListItem;
+use crate::types::StationPriceChange;
 
 use chrono::prelude::*;
 use leptos::prelude::*;
 
 #[component]
-pub fn AllPrices(cx: Scope) -> impl IntoView {
+pub fn AllPrices() -> impl IntoView {
     let list = create_resource(
-        cx,
         || (), //< run once
-        |_| async move {
-            get_all_prices().await.expect("get_all_prices resource")
-        },
+        |_| async move { get_all_prices().await.expect("get_all_prices resource") },
     );
 
     view! {
-        cx,
-        <Suspense fallback=move || view! { cx, <p>"Loading Price List with History..."</p> }>
-            {move || { list.read(cx).map(|list| list.into_iter()
-                .map(|n| view! { cx,
+        <Suspense fallback=move || view! { <p>"Loading Price List with History..."</p> }>
+            {move || { list.read().map(|list| list.into_iter()
+                .map(|n| view! {
                     <PriceListItem item=n/>
                 })
-                .collect_view(cx)
+                .collect_view()
             )}}
         </Suspense>
     }

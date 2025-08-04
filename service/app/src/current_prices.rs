@@ -4,23 +4,19 @@ use crate::price_list::PriceListItem;
 use leptos::prelude::*;
 
 #[component]
-pub fn CurrentPrices(cx: Scope) -> impl IntoView {
+pub fn CurrentPrices() -> impl IntoView {
     let list = create_resource(
-        cx,
         || (), //< run once
-        |_| async move {
-            get_current_prices().await.unwrap()
-        },
+        |_| async move { get_current_prices().await.unwrap() },
     );
 
     view! {
-        cx,
-        <Suspense fallback=move || view! { cx, <p>"Loading Current Price List..."</p> }>
-            {move || { list.read(cx).map(|list| list.into_iter()
-                .map(|n| view! { cx,
+        <Suspense fallback=move || view! { <p>"Loading Current Price List..."</p> }>
+            {move || { list.read().map(|list| list.into_iter()
+                .map(|n| view! {
                     <PriceListItem item=n/>
                 })
-                .collect_view(cx)
+                .collect_view()
             )}}
         </Suspense>
     }

@@ -9,11 +9,10 @@ use leptos_meta::*;
 use leptos_router::components::{A, Router, Routes, Route};
 
 #[component]
-pub fn App(cx: Scope) -> impl IntoView {
-    provide_meta_context(cx);
+pub fn App() -> impl IntoView {
+    provide_meta_context();
 
     view! {
-        cx,
         <Title text="Refuel WebApp"/>
         <Link rel="shortcut icon" type_="image/ico" href="/favicon.ico"/>
         <Stylesheet id="refuel" href="/tailwind.css"/>
@@ -23,30 +22,30 @@ pub fn App(cx: Scope) -> impl IntoView {
                 <Routes>
                     <Route
                         path=""
-                        view=move |cx| view! { cx,  <CurrentPrices/> }
+                        view=move || view! { <CurrentPrices/> }
                     >
                     </Route>
                     <Route
                         path="stations"
-                        view=move |cx| view! { cx,  <PriceHistory/> }
+                        view=move || view! { <PriceHistory/> }
                     >
                         <Route
                             path=":id"
-                            view=move |cx| view! { cx,  <StationPriceHistory/> }
+                            view=move || view! { <StationPriceHistory/> }
                         />
                         // fallback if :id is missing from URL
                         <Route
                             path=""
-                            view=move |cx| view! { cx,  <p>"Select a station"</p> }
+                            view=move || view! { <p>"Select a station"</p> }
                         />
                     </Route>
                     <Route
                         path="all"
-                        view=move |cx| view! { cx,  <AllPrices/> }
+                        view=move || view! { <AllPrices/> }
                     />
                     <Route
                         path="about"
-                        view=move |cx| view! { cx,  <About/> }
+                        view=move || view! { <About/> }
                     />
                 </Routes>
             </main>
@@ -55,13 +54,12 @@ pub fn App(cx: Scope) -> impl IntoView {
 }
 
 #[component(transparent)]
-pub fn NavBar(cx: Scope) -> impl IntoView {
+pub fn NavBar() -> impl IntoView {
     use std::ops::Not;
 
     let (menu_hidden, toggle_menu) = signal(true);
 
     view! {
-        cx,
         <nav class="flex flex-wrap items-center justify-between w-full py-4 md:py-0 px-4 text-lg text-gray-700 bg-white">
             <A class="flex px-4 justify-between cursor-pointer" href="">
                 <img class="w-6 h-6" alt="Refuel" src="/favicon-1.png"/>

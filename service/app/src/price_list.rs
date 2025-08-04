@@ -4,13 +4,12 @@ use chrono::prelude::*;
 use leptos::prelude::*;
 
 #[component]
-pub(crate) fn PriceListItem(cx: Scope, item: StationPriceChange) -> impl IntoView {
+pub(crate) fn PriceListItem(item: StationPriceChange) -> impl IntoView {
     let name = &item.name;
     let addr = &item.addr;
     let price = &item.price;
     let updated = item.updated.with_timezone(&Local);
     view! {
-        cx,
         <div class="flex flex-col bg-white text-gray-700 py-2 px-4">
             <div class="flex flex-row justify-between text-2xl">
                 // station name

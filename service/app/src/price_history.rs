@@ -8,28 +8,23 @@ use leptos_router::hooks::use_params_map;
 use leptos_router::nested_router::Outlet;
 
 #[component]
-pub fn PriceHistory(cx: Scope) -> impl IntoView {
+pub fn PriceHistory() -> impl IntoView {
     view! {
-        cx,
         <StationList/>
         <Outlet/>
     }
 }
 
 #[component]
-pub fn StationList(cx: Scope) -> impl IntoView {
+pub fn StationList() -> impl IntoView {
     let list = create_resource(
-        cx,
         || (), //< run once
-        |_| async move {
-            get_stations().await.unwrap()
-        },
+        |_| async move { get_stations().await.unwrap() },
     );
 
     view! {
-        cx,
         <div>
-            <Suspense fallback=move || view! { cx, <p>"Loading Station List..."</p> }>
+            <Suspense fallback=move || view! { <p>"Loading Station List..."</p> }>
                 <table class="primary">
                     <thead>
                         <tr>
@@ -39,15 +34,15 @@ pub fn StationList(cx: Scope) -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        {move || { list.read(cx).map(|list| list.into_iter()
-                            .map(|n| view! { cx,
+                        {move || { list.read().map(|list| list.into_iter()
+                            .map(|n| view! {
                                 <tr>
                                     <td><div><A href={n.id.to_string()}>{n.id}</A></div></td>
                                     <td><div>{n.name}</div></td>
                                     <td><address>{n.addr}</address></td>
                                 </tr>
                             })
-                            .collect_view(cx)
+                            .collect_view()
                         )}}
                     </tbody>
                 </table>
@@ -57,21 +52,21 @@ pub fn StationList(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn StationPriceHistory(cx: Scope) -> impl IntoView {
-    let params = use_params_map(cx);
+pub fn StationPriceHistory() -> impl IntoView {
+    let params = use_params_map();
 
     let list = create_resource(
-        cx,
         move || params.with(|p| p.get("id").cloned().unwrap_or_default()),
         move |id| async move {
-            get_price_history(id.parse::<i32>().expect("station id is no number")).await.unwrap()
+            get_price_history(id.parse::<i32>().expect("station id is no number"))
+                .await
+                .unwrap()
         },
     );
 
     view! {
-        cx,
         <div>
-            <Suspense fallback=move || view! { cx, <p>"Loading Station Price History..."</p> }>
+            <Suspense fallback=move || view! { <p>"Loading Station Price History..."</p> }>
                 <table class="primary">
                     <thead>
                         <tr>
@@ -82,8 +77,8 @@ pub fn StationPriceHistory(cx: Scope) -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        {move || { list.read(cx).map(|list| list.into_iter()
-                            .map(|n| view! { cx,
+                        {move || { list.read().map(|list| list.into_iter()
+                            .map(|n| view! {
                                 <tr>
                                     <td><div>{n.name}</div></td>
                                     <td><address>{n.addr}</address></td>
@@ -91,7 +86,7 @@ pub fn StationPriceHistory(cx: Scope) -> impl IntoView {
                                     <td><div>{format!("{}", n.updated.with_timezone(&Local).format("%Y-%m-%d %H:%M"))}</div></td>
                                 </tr>
                             })
-                            .collect_view(cx)
+                            .collect_view()
                         )}}
                     </tbody>
                 </table>
