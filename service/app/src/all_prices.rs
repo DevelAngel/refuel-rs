@@ -33,7 +33,8 @@ pub async fn get_all_prices() -> Result<Vec<StationPriceChange>, ServerFnError> 
 
     let conn = &mut establish_connection_sqlite();
     let list = DBStationPriceChange::load_all(conn);
-    let list = list.into_iter()
+    let list = list
+        .into_iter()
         .map(|rs| StationPriceChange::from(rs))
         .collect();
     Ok(list)

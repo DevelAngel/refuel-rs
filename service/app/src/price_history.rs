@@ -105,9 +105,7 @@ pub async fn get_stations() -> Result<Vec<Station>, ServerFnError> {
 
     let conn = &mut establish_connection_sqlite();
     let list = DBStation::load_all(conn);
-    let list = list.into_iter()
-        .map(|rs| Station::from(rs))
-        .collect();
+    let list = list.into_iter().map(|rs| Station::from(rs)).collect();
     Ok(list)
 }
 
@@ -121,7 +119,8 @@ pub async fn get_price_history(station_id: i32) -> Result<Vec<StationPriceChange
 
     let conn = &mut establish_connection_sqlite();
     let list = DBStationPriceChange::load_station(station_id, conn);
-    let list = list.into_iter()
+    let list = list
+        .into_iter()
         .map(|rs| StationPriceChange::from(rs))
         .collect();
     Ok(list)
