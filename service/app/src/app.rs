@@ -58,7 +58,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 pub fn NavBar(cx: Scope) -> impl IntoView {
     use std::ops::Not;
 
-    let (menu_hidden, toggle_menu) = create_signal(cx, true);
+    let (menu_hidden, toggle_menu) = signal(true);
 
     view! {
         cx,
