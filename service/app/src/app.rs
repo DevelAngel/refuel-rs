@@ -6,7 +6,8 @@ use crate::price_history::StationPriceHistory;
 
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::components::{A, Router, Routes, Route};
+use leptos_router::components::{ParentRoute, Route, Router, Routes, A};
+use leptos_router::path;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -19,33 +20,31 @@ pub fn App() -> impl IntoView {
         <Router>
             <NavBar/>
             <main>
-                <Routes>
+                <Routes fallback=|| "Not found.">
                     <Route
-                        path=""
-                        view=move || view! { <CurrentPrices/> }
-                    >
-                    </Route>
-                    <Route
-                        path="stations"
-                        view=move || view! { <PriceHistory/> }
+                        path=path!("/")
+                        view=CurrentPrices/>
+                    <ParentRoute
+                        path=path!("/stations")
+                        view=PriceHistory
                     >
                         <Route
-                            path=":id"
-                            view=move || view! { <StationPriceHistory/> }
+                            path=path!(":id")
+                            view=StationPriceHistory
                         />
                         // fallback if :id is missing from URL
                         <Route
-                            path=""
-                            view=move || view! { <p>"Select a station"</p> }
+                            path=path!("")
+                            view=|| view! { <p>"Select a station"</p> }
                         />
-                    </Route>
+                    </ParentRoute>
                     <Route
-                        path="all"
-                        view=move || view! { <AllPrices/> }
+                        path=path!("/all")
+                        view=AllPrices
                     />
                     <Route
-                        path="about"
-                        view=move || view! { <About/> }
+                        path=path!("/about")
+                        view=About
                     />
                 </Routes>
             </main>
