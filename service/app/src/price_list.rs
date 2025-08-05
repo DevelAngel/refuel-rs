@@ -13,13 +13,13 @@ pub(crate) fn PriceListItem(item: StationPriceChange) -> impl IntoView {
         <div class="flex flex-col bg-white text-gray-700 py-2 px-4">
             <div class="flex flex-row justify-between text-2xl">
                 // station name
-                <div class="flex-none px-1">{name}</div>
+                <div class="flex-none px-1">{name.clone()}</div>
                 // price
                 <div class="flex-none px-1">{price[0]}","{price[1]}<sup>{price[2]}</sup></div>
             </div>
             <div class="flex flex-row justify-between flex-wrap text-base">
                 // station address
-                <address class="flex-1 px-1">{addr}</address>
+                <address class="flex-1 px-1">{addr.clone()}</address>
                 // updated date and time
                 <div class="flex-none px-1">{format!("{}", updated.format("%Y-%m-%d"))}</div>
                 <div class="flex-none px-1">{format!("{}", updated.format("%H:%M"))}</div>

@@ -56,7 +56,7 @@ pub fn StationPriceHistory() -> impl IntoView {
     let params = use_params_map();
 
     let list = Resource::new(
-        move || params.with(|p| p.get("id").cloned().unwrap_or_default()),
+        move || params.with(|p| p.get("id").unwrap_or_default()),
         move |id| async move {
             get_price_history(id.parse::<i32>().expect("station id is no number"))
                 .await
