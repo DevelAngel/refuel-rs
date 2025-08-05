@@ -2,7 +2,8 @@ use refuel_app::prelude::App;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use leptos::*;
+use leptos::mount::mount_to_body;
+use leptos::prelude::*;
 
 #[wasm_bindgen]
 pub fn hydrate() {
@@ -12,7 +13,7 @@ pub fn hydrate() {
 
     tracing::info!("hydrate mode - hydrating");
 
-    leptos::mount_to_body(|cx| {
-        view! { cx,  <App/> }
+    mount_to_body(|| {
+        view! { <App/> }
     });
 }
