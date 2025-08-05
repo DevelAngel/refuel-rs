@@ -17,7 +17,7 @@ pub fn PriceHistory() -> impl IntoView {
 
 #[component]
 pub fn StationList() -> impl IntoView {
-    let list = create_resource(
+    let list = Resource::new(
         || (), //< run once
         |_| async move { get_stations().await.unwrap() },
     );
@@ -34,7 +34,7 @@ pub fn StationList() -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        {move || { list.read().map(|list| list.into_iter()
+                        {move || { list.get().map(|list| list.into_iter()
                             .map(|n| view! {
                                 <tr>
                                     <td><div><A href={n.id.to_string()}>{n.id}</A></div></td>
@@ -55,7 +55,7 @@ pub fn StationList() -> impl IntoView {
 pub fn StationPriceHistory() -> impl IntoView {
     let params = use_params_map();
 
-    let list = create_resource(
+    let list = Resource::new(
         move || params.with(|p| p.get("id").cloned().unwrap_or_default()),
         move |id| async move {
             get_price_history(id.parse::<i32>().expect("station id is no number"))
@@ -77,7 +77,7 @@ pub fn StationPriceHistory() -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        {move || { list.read().map(|list| list.into_iter()
+                        {move || { list.get().map(|list| list.into_iter()
                             .map(|n| view! {
                                 <tr>
                                     <td><div>{n.name}</div></td>
@@ -100,7 +100,7 @@ pub async fn get_stations() -> Result<Vec<Station>, ServerFnError> {
     use refuel_db::establish_connection_sqlite;
     use refuel_db::prelude::Station as DBStation;
 
-    // simulate some time to acquire the informations
+    // simulate some time to acquire the information
     //tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     let conn = &mut establish_connection_sqlite();
@@ -114,7 +114,7 @@ pub async fn get_price_history(station_id: i32) -> Result<Vec<StationPriceChange
     use refuel_db::establish_connection_sqlite;
     use refuel_db::prelude::StationPriceChange as DBStationPriceChange;
 
-    // simulate some time to acquire the informations
+    // simulate some time to acquire the information
     //tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     let conn = &mut establish_connection_sqlite();
