@@ -60,7 +60,7 @@ pub fn NavBar() -> impl IntoView {
 
     view! {
         <nav class="flex flex-wrap items-center justify-between w-full py-4 md:py-0 px-4 text-lg text-gray-700 bg-white">
-            <A class="flex px-4 justify-between cursor-pointer" href="">
+            <A href="">
                 <img class="w-6 h-6" alt="Refuel" src="/favicon-1.png"/>
                 <span>"Refuel"</span>
             </A>
@@ -81,9 +81,9 @@ pub fn NavBar() -> impl IntoView {
             // menu
             <div id="menu" class:hidden=move || menu_hidden.get() class="w-full md:flex md:w-auto md:items-center md:justify-between">
                 <ul class="text-base text-gray-700 pt-4 md:flex md:pt-0 md:justify-between">
-                    <li><A href="stations" class="py-2 block md:p-4 hover:text-purple-400">"Price History"</A></li>
-                    <li><A href="all" class="py-2 block md:p-4 hover:text-purple-400">"All Prices"</A></li>
-                    <li><A href="about" class="py-2 block md:p-4 hover:text-purple-400">"About"</A></li>
+                    <li><A href="stations">"Price History"</A></li>
+                    <li><A href="all">"All Prices"</A></li>
+                    <li><A href="about">"About"</A></li>
                 </ul>
             </div>
         </nav>
